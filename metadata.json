@@ -1,0 +1,6 @@
+{
+  "name": "Nanosat Explorer",
+  "description": "کاوشگر و پایگاه داده پیشرفته ماهواره‌های مکعبی و نانو بر اساس nanosats.eu با فیلترهای دقیق و هوش مصنوعی",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
