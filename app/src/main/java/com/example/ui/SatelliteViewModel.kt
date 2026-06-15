@@ -1,19 +1,20 @@
 package com.example.ui
 
 import android.app.Application
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.Satellite
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.util.UUID
 
-// وضعیت‌های مورد نیاز برای هوش مصنوعی Gemini در برنامه
 sealed interface GeminiSearchState {
     object Idle : GeminiSearchState
     object Loading : GeminiSearchState
@@ -23,50 +24,55 @@ sealed interface GeminiSearchState {
 
 class SatelliteViewModel(application: Application) : AndroidViewModel(application) {
 
-    // لیست اصلی نگهداری ماهواره‌ها در حافظه
-    private val allSatellitesList = mutableStateListOf<Satellite>()
+    private val _allSatellites = MutableStateFlow<List<Satellite>>(emptyList())
+    val allSatellites: StateFlow<List<Satellite>> = _allSatellites
 
-    // تمام متغیرهایی که MainActivity برای فیلتر و نمایش به آن‌ها نیاز دارد
-    val searchQuery = mutableStateOf("")
-    val selectedUnitSize = mutableStateOf<String?>(null)
-    val selectedWeightRange = mutableStateOf<String?>(null)
-    val selectedStatus = mutableStateOf<String?>(null)
-    val selectedCountry = mutableStateOf<String?>(null)
-    val selectedMissionType = mutableStateOf<String?>(null)
-    val showOnlyFavorites = mutableStateOf(false)
-    val selectedSatellite = mutableStateOf<Satellite?>(null)
-    val geminiSearchState = mutableStateOf<GeminiSearchState>(GeminiSearchState.Idle)
+    // تعریف متغیرها به صورت StateFlow جهت هماهنگی کامل با MainActivity
+    val searchQuery = MutableStateFlow("")
+    val selectedUnitSize = MutableStateFlow<String?>(null)
+    val selectedWeightRange = MutableStateFlow<String?>(null)
+    val selectedStatus = MutableStateFlow<String?>(null)
+    val selectedCountry = MutableStateFlow<String?>(null)
+    val selectedMissionType = MutableStateFlow<String?>(null)
+    val showOnlyFavorites = MutableStateFlow(false)
+    
+    private val _selectedSatellite = MutableStateFlow<Satellite?>(null)
+    val selectedSatellite: StateFlow<Satellite?> = _selectedSatellite
 
-    // فیلتر شدن خودکار لیست ماهواره‌ها به محض تغییر فیلترها توسط کاربر
-    val uiState = derivedStateOf {
-        var filtered = allSatellitesList.toList()
-        val query = searchQuery.value
+    private val _geminiSearchState = MutableStateFlow<GeminiSearchState>(GeminiSearchState.Idle)
+    val geminiSearchState: StateFlow<GeminiSearchState> = _geminiSearchState
+
+    // ترکیب فیلترها و تولید خودکار لیست نهایی برای نمایش در UI
+    val uiState: StateFlow<List<Satellite>> = combine(
+        _allSatellites, searchQuery, selectedCountry, selectedStatus, showOnlyFavorites
+    ) { list, query, country, status, favOnly ->
+        var filtered = list
         if (query.isNotEmpty()) {
             filtered = filtered.filter { it.name.contains(query, ignoreCase = true) }
         }
-        val country = selectedCountry.value
         if (country != null) {
             filtered = filtered.filter { it.launchCountry == country }
         }
-        val status = selectedStatus.value
         if (status != null) {
             filtered = filtered.filter { it.status == status }
         }
-        if (showOnlyFavorites.value) {
+        if (favOnly) {
             filtered = filtered.filter { it.isFavorite }
         }
         filtered
-    }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // متغیرهای آماری برنامه
-    val totalCount = derivedStateOf { uiState.value.size }
-    val availableCountries = derivedStateOf { allSatellitesList.map { it.launchCountry }.distinct().sorted() }
+    val totalCount: StateFlow<Int> = combine(uiState) { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val availableCountries: StateFlow<List<String>> = combine(_allSatellites) { list ->
+        list.map { it.launchCountry }.distinct().sorted()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         loadSatellitesFromJson()
     }
 
-    // خواندن فایل JSON شما و تبدیل فیلدها به ساختار استاندارد برنامه
     private fun loadSatellitesFromJson() {
         viewModelScope.launch {
             val list = withContext(Dispatchers.IO) {
@@ -79,24 +85,25 @@ class SatelliteViewModel(application: Application) : AndroidViewModel(applicatio
                     for (i in 0 until jsonArray.length()) {
                         val obj = jsonArray.getJSONObject(i)
                         val weightStr = obj.optString("Type (U/mass)", "0")
-                        
-                        // استخراج وزن عددی از متن (مثلا "8.5 kg" تبدیل به 8.5 می‌شود)
                         val numericWeight = try {
                             weightStr.replace(Regex("[^0-9.]"), "").toDoubleOrNull() ?: 0.0
                         } catch(e: Exception) { 0.0 }
+
+                        val missionDesc = obj.optString("Mission description", "بدون توضیحات")
 
                         temp.add(
                             Satellite(
                                 id = UUID.randomUUID().toString(),
                                 name = obj.optString("Mission name", "نامشخص"),
-                                missionType = obj.optString("Mission description", "نامشخص"),
+                                missionType = missionDesc,
                                 unitSize = obj.optString("Type (U/mass)", "نامشخص"),
                                 weightKg = numericWeight,
                                 launchCountry = obj.optString("Nation", "نامشخص"),
                                 launchAgency = obj.optString("Organisation", "نامشخص"),
                                 status = obj.optString("Status", "نامشخص"),
                                 launchDate = obj.optString("Launch date", "نامشخص"),
-                                missionObjective = obj.optString("Mission description", "بدون توضیحات")
+                                description = missionDesc,
+                                missionObjective = missionDesc
                             )
                         )
                     }
@@ -105,14 +112,13 @@ class SatelliteViewModel(application: Application) : AndroidViewModel(applicatio
                 }
                 temp
             }
-            allSatellitesList.clear()
-            allSatellitesList.addAll(list)
+            _allSatellites.value = list
         }
     }
 
-    // متدها و اکشن‌های کلیک که لایه UI به آن‌ها نیاز دارد
+    // متدهای تعاملی مورد نیاز کامپوننت‌های MainActivity
     fun selectSatellite(satellite: Satellite?) {
-        selectedSatellite.value = satellite
+        _selectedSatellite.value = satellite
     }
 
     fun clearAllFilters() {
@@ -126,32 +132,35 @@ class SatelliteViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun toggleFavorite(satellite: Satellite) {
-        val index = allSatellitesList.indexOfFirst { it.id == satellite.id }
+        val currentList = _allSatellites.value.toMutableList()
+        val index = currentList.indexOfFirst { it.id == satellite.id }
         if (index != -1) {
-            val updated = allSatellitesList[index].copy(isFavorite = !allSatellitesList[index].isFavorite)
-            allSatellitesList[index] = updated
-            if (selectedSatellite.value?.id == satellite.id) {
-                selectedSatellite.value = updated
+            val updated = currentList[index].copy(isFavorite = !currentList[index].isFavorite)
+            currentList[index] = updated
+            _allSatellites.value = currentList
+            if (_selectedSatellite.value?.id == satellite.id) {
+                _selectedSatellite.value = updated
             }
         }
     }
 
     fun deleteSatellite(satellite: Satellite) {
-        allSatellitesList.removeAll { it.id == satellite.id }
-        if (selectedSatellite.value?.id == satellite.id) {
-            selectedSatellite.value = null
+        val currentList = _allSatellites.value.toMutableList()
+        currentList.removeAll { it.id == satellite.id }
+        _allSatellites.value = currentList
+        if (_selectedSatellite.value?.id == satellite.id) {
+            _selectedSatellite.value = null
         }
     }
 
     fun resetGeminiState() {
-        geminiSearchState.value = GeminiSearchState.Idle
+        _geminiSearchState.value = GeminiSearchState.Idle
     }
 
     fun searchOnlineSatellite(query: String) {
-        geminiSearchState.value = GeminiSearchState.Loading
+        _geminiSearchState.value = GeminiSearchState.Loading
         viewModelScope.launch {
-            // شبیه‌سازی پاسخ آنلاین برای عدم کرش برنامه
-            geminiSearchState.value = GeminiSearchState.Success("اطلاعات تکمیلی یافت نشد.")
+            _geminiSearchState.value = GeminiSearchState.Success("اطلاعات آنلاین یافت نشد.")
         }
     }
 }
