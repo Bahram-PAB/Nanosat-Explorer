@@ -1,15 +1,18 @@
 package com.example.data
 
-// این کلاس قالب ماهواره‌های شما را برای برنامه مشخص می‌کند
+// قالب کامل ماهواره‌ها که تمام نیازهای MainActivity را برطرف می‌کند
 data class Satellite(
-    val name: String,
-    val organisation: String,
-    val nation: String,
-    val type: String,
-    val launchDate: String,
-    val status: String,
-    val description: String,
-    // این دو خط زیر به صورت زاپاس قرار گرفته‌اند تا اگر ظاهر برنامه به TLE نیاز داشت، خطا ندهد
-    val tleLine1: String = "",
-    val tleLine2: String = ""
+    val id: String = "",
+    val name: String = "",
+    val missionType: String = "",
+    val unitSize: String = "",
+    val weightKg: Double = 0.0,
+    val launchCountry: String = "",
+    val launchAgency: String = "",
+    val status: String = "",
+    val launchDate: String = "",
+    val missionObjective: String = "",
+    val imageUrl: String? = null,
+    val isCustom: Boolean = false,
+    val isFavorite: Boolean = false
 )
