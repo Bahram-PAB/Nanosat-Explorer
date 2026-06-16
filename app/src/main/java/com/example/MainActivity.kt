@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -95,40 +96,42 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
     // Main Scaffold
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = "Index",
-                            tint = SolidPrimary,
-                            modifier = Modifier.size(26.dp)
-                        )
-                        Text(
-                            text = "NANOSAT FINDER",
-                            fontFamily = FontFamily.SansSerif,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.5.sp,
-                            color = PrimaryText
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.clearAllFilters() }) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Reset Filters",
-                            tint = if (isAnyFilterApplied) SolidPrimary else Color.Gray
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = SpaceBackground
+            if (selectedSatellite == null) {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = "Index",
+                                tint = SolidPrimary,
+                                modifier = Modifier.size(26.dp)
+                            )
+                            Text(
+                                text = "NANOSAT FINDER",
+                                fontFamily = FontFamily.SansSerif,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.5.sp,
+                                color = PrimaryText
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { viewModel.clearAllFilters() }) {
+                            Icon(
+                                imageVector = Icons.Default.CleaningServices,
+                                contentDescription = "Reset Filters",
+                                tint = if (isAnyFilterApplied) SolidPrimary else Color.Gray
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = SpaceBackground
+                    )
                 )
-            )
+            }
         },
         containerColor = SpaceBackground
     ) { innerPadding ->
@@ -290,20 +293,20 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                         }
                     }
                 } else {
-                    // Grid / List Display of satellites
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 160.dp),
+                    // Single column List Display of satellites
+                    LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .weight(1f),
                         contentPadding = PaddingValues(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(satellites) { satellite ->
-                            SatelliteCard(satellite = satellite, onSelect = {
-                                viewModel.selectSatellite(satellite)
-                            })
+                            SatelliteCard(
+                                satellite = satellite,
+                                onSelect = { viewModel.selectSatellite(satellite) },
+                                onToggleFavorite = { viewModel.toggleFavorite(satellite) }
+                            )
                         }
                     }
                 }
@@ -356,7 +359,7 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
 
                     // Right side (version text)
                     Text(
-                        text = "نسخه ۴.۰",
+                        text = "نسخه ۴.۱",
                         color = SecondaryText,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
@@ -437,7 +440,7 @@ fun FilterChipIndicator(label: String, onRemove: () -> Unit) {
 }
 
 @Composable
-fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit) {
+fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit, onToggleFavorite: () -> Unit) {
     val statusColor = statusToColor(satellite.status)
 
     Card(
@@ -454,7 +457,7 @@ fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit) {
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Header: Name & Type U size badge
+            // Header: Name & Favorite button & Type U size badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -469,6 +472,21 @@ fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+
+                // Favorite Toggle Star Button
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (satellite.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = "Toggle Favorite",
+                        tint = if (satellite.isFavorite) Color.Yellow else Color.White.copy(alpha = 0.35f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 Box(
                     modifier = Modifier
@@ -581,7 +599,7 @@ fun SatelliteDetailView(
                             .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(20.dp))
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color.White
                         )
