@@ -32,6 +32,9 @@ class SatelliteViewModel(application: Application) : AndroidViewModel(applicatio
     // Combined filtered list
     val uiState: StateFlow<List<Satellite>>
 
+    // Total counts in SQLite catalog
+    val totalSatelliteCount: StateFlow<Int>
+
     // Live list of all countries for filter dropdown
     val availableCountries: StateFlow<List<String>>
 
@@ -115,6 +118,14 @@ class SatelliteViewModel(application: Application) : AndroidViewModel(applicatio
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
+        )
+
+        totalSatelliteCount = repository.allSatellites.map { list ->
+            list.size
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
         )
     }
 

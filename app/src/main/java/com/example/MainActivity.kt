@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -76,6 +77,7 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
     val selectedMissionType by viewModel.selectedMissionType.collectAsStateWithLifecycle()
     val showOnlyFavorites by viewModel.showOnlyFavorites.collectAsStateWithLifecycle()
     val countries by viewModel.availableCountries.collectAsStateWithLifecycle()
+    val totalCount by viewModel.totalSatelliteCount.collectAsStateWithLifecycle()
     
     val selectedSatellite by viewModel.selectedSatellite.collectAsStateWithLifecycle()
     
@@ -136,93 +138,52 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                 .padding(innerPadding)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Top Search Box & Filter Trigger Button
+                // Top Search Box replaced with Advanced Filter triggers
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .background(SearchBackground, RoundedCornerShape(12.dp))
+                        .clickable { showFilterDialog = true }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Search Bar
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { viewModel.searchQuery.value = it },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("satellite_search_bar"),
-                        placeholder = {
-                            Text(
-                                "نام ماهواره، کشور یا سازمان...",
-                                color = Color.Gray,
-                                fontSize = 14.sp
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search icon",
-                                tint = SolidPrimary
-                            )
-                        },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.searchQuery.value = "" }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Clear,
-                                        contentDescription = "Clear search",
-                                        tint = Color.Gray
-                                    )
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = SolidPrimary,
-                            unfocusedBorderColor = SearchBackground,
-                            focusedTextColor = PrimaryText,
-                            unfocusedTextColor = PrimaryText,
-                            focusedContainerColor = SearchBackground,
-                            unfocusedContainerColor = SearchBackground
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    // Filter Button
+                    // Left side: Advanced Filter icon indicator with badge
                     Box {
-                        Badge(
-                            containerColor = SolidPrimary,
-                            contentColor = SpaceBackground,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(x = 2.dp, y = (-2).dp)
-                                .alpha(if (isAnyFilterApplied) 1f else 0f)
-                        ) {
-                            var count = 0
-                            if (selectedUnit != null) count++
-                            if (selectedWeight != null) count++
-                            if (selectedStatus != null) count++
-                            if (selectedCountry != null) count++
-                            if (showOnlyFavorites) count++
-                            Text(count.toString(), fontWeight = FontWeight.Bold)
+                        if (isAnyFilterApplied) {
+                            Badge(
+                                containerColor = SolidPrimary,
+                                contentColor = SpaceBackground,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = 6.dp, y = (-6).dp)
+                            ) {
+                                var count = 0
+                                if (selectedUnit != null) count++
+                                if (selectedWeight != null) count++
+                                if (selectedStatus != null) count++
+                                if (selectedCountry != null) count++
+                                if (showOnlyFavorites) count++
+                                if (selectedMissionType != null) count++
+                                Text(count.toString(), fontWeight = FontWeight.Bold)
+                            }
                         }
-                        Button(
-                            onClick = { showFilterDialog = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isAnyFilterApplied) DarkAccent else SearchBackground,
-                                contentColor = if (isAnyFilterApplied) SolidPrimary else SecondaryText
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(12.dp),
-                            modifier = Modifier.size(52.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.List,
-                                contentDescription = "Filter Options",
-                                tint = if (isAnyFilterApplied) SolidPrimary else SecondaryText
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.List,
+                            contentDescription = "Advanced Filters",
+                            tint = if (isAnyFilterApplied) SolidPrimary else SecondaryText,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
+
+                    // Right side: Persian text "فیلترهای پیشرفته"
+                    Text(
+                        text = "فیلترهای پیشرفته",
+                        color = PrimaryText,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 // Horizontal Active Filter badging indicators
@@ -294,9 +255,10 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                     )
 
                     Text(
-                        text = "مرجع داده: nanosats.eu",
+                        text = "تعداد کل ماهواره‌ها: $totalCount",
                         color = SecondaryText,
-                        fontSize = 11.sp
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
 
@@ -344,6 +306,61 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                             })
                         }
                     }
+                }
+
+                // Footer Divider
+                HorizontalDivider(
+                    color = Color.Gray.copy(alpha = 0.15f),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+
+                // Footer Bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left side (icons)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+
+                        IconButton(
+                            onClick = { uriHandler.openUri("https://github.com/Bahram-PAB") },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_github),
+                                contentDescription = "GitHub",
+                                tint = SolidPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { uriHandler.openUri("https://www.linkedin.com/in/bahram-pouralibaba-1a992239") },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_linkedin),
+                                contentDescription = "LinkedIn",
+                                tint = SolidPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+
+                    // Right side (version text)
+                    Text(
+                        text = "نسخه ۱.۰",
+                        color = SecondaryText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
 
