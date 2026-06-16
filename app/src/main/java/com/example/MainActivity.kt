@@ -356,7 +356,7 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
 
                     // Right side (version text)
                     Text(
-                        text = "نسخه ۱.۰",
+                        text = "نسخه ۴.۰",
                         color = SecondaryText,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium

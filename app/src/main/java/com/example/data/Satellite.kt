@@ -122,13 +122,57 @@ class SatelliteRepository(private val satelliteDao: SatelliteDao) {
         satelliteDao.insertSatellites(parsedSats)
     }
 
+    private fun sanitizeJson(jsonString: String): String {
+        val lines = jsonString.split("\n")
+        val cleanedLines = lines.map { line ->
+            val trimmed = line.trim()
+            val colonIdx = line.indexOf("\":\"")
+            if (colonIdx != -1 && trimmed.startsWith("\"") && (trimmed.endsWith("\",") || trimmed.endsWith("\""))) {
+                val keyPart = line.substring(0, colonIdx + 1)
+                val valuePart = line.substring(colonIdx + 2)
+                val trimmedVal = valuePart.trim()
+                val hasComma = trimmedVal.endsWith(",")
+                
+                val startQuoteIdx = valuePart.indexOf("\"")
+                val endQuoteIdx = if (hasComma) valuePart.lastIndexOf("\",") else valuePart.lastIndexOf("\"")
+                
+                if (startQuoteIdx != -1 && endQuoteIdx > startQuoteIdx) {
+                    val valueLeading = valuePart.substring(0, startQuoteIdx + 1)
+                    val valueTrailing = valuePart.substring(endQuoteIdx)
+                    val valueBody = valuePart.substring(startQuoteIdx + 1, endQuoteIdx)
+                    
+                    val escapedBody = StringBuilder()
+                    for (i in valueBody.indices) {
+                        val char = valueBody[i]
+                        if (char == '"') {
+                            if (i == 0 || valueBody[i - 1] != '\\') {
+                                escapedBody.append("\\\"")
+                            } else {
+                                escapedBody.append(char)
+                            }
+                        } else {
+                            escapedBody.append(char)
+                        }
+                    }
+                    keyPart + ":" + valueLeading + escapedBody.toString() + valueTrailing
+                } else {
+                    line
+                }
+            } else {
+                line
+            }
+        }
+        return cleanedLines.joinToString("\n")
+    }
+
     private fun loadSatellitesFromAsset(context: Context): List<Satellite> {
         val satellites = mutableListOf<Satellite>()
         try {
             context.assets.open("satellite-database.json").use { inputStream ->
                 val jsonString = inputStream.reader().use { it.readText() }
+                val sanitized = sanitizeJson(jsonString)
                 // Remove trailing commas gracefully using Regex so that standard Android org.json reader won't fail
-                val cleanedJson = jsonString.replace(Regex(",\\s*([\\}\\]])"), "$1")
+                val cleanedJson = sanitized.replace(Regex(",\\s*([\\}\\]])"), "$1")
                 val jsonArray = JSONArray(cleanedJson)
                 for (i in 0 until jsonArray.length()) {
                     val obj = jsonArray.getJSONObject(i)

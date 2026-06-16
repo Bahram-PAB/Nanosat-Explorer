@@ -1,0 +1,8 @@
+INDEX: 94082
+":"US",
+        "Type (U/mass)":"3U",
+        "Launch date":"2014-04-18",
+        "Status":"Reentered, Operational",
+        "Mission description":""Lab-on-a-chip" experiments to gain a deeper knowledge of the mechanism of plant cell gravity sensing."},
+    {
+        "Mission name":"TSAT (TSat3, Tes
