@@ -22,6 +22,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,10 +48,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.data.Satellite
 import com.example.data.missionType
-import com.example.ui.GeminiSearchState
 import com.example.ui.SatelliteViewModel
 import com.example.ui.theme.*
-import com.example.api.GeminiClient
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,11 +78,8 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
     val countries by viewModel.availableCountries.collectAsStateWithLifecycle()
     
     val selectedSatellite by viewModel.selectedSatellite.collectAsStateWithLifecycle()
-    val geminiState by viewModel.geminiSearchState.collectAsStateWithLifecycle()
     
     var showFilterDialog by remember { mutableStateOf(false) }
-    var geminiSearchInput by remember { mutableStateOf("") }
-    var showGeminiSearchDialog by remember { mutableStateOf(false) }
 
     // Multi-criteria checking
     val isAnyFilterApplied = selectedUnit != null || selectedWeight != null || 
@@ -114,15 +111,6 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 1.5.sp,
                             color = PrimaryText
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { showGeminiSearchDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Gemini Query",
-                            tint = SolidPrimary
                         )
                     }
                 },
@@ -337,22 +325,6 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                                 fontSize = 14.sp,
                                 textAlign = TextAlign.Center
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Button(
-                                onClick = {
-                                    geminiSearchInput = searchQuery
-                                    showGeminiSearchDialog = true
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = SolidPrimary,
-                                    contentColor = SpaceBackground
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Icon(Icons.Default.Search, "AI Search")
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("جستجوی زنده در nanosats.eu با هوش مصنوعی")
-                            }
                         }
                     }
                 } else {
@@ -416,19 +388,7 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                 )
             }
 
-            // Dialog for Gemini dynamic database index search
-            if (showGeminiSearchDialog) {
-                GeminiSearchDialog(
-                    onDismiss = {
-                        showGeminiSearchDialog = false
-                        viewModel.resetGeminiState()
-                    },
-                    inputValue = geminiSearchInput,
-                    onInputValueChange = { geminiSearchInput = it },
-                    geminiState = geminiState,
-                    onTriggerSearch = { viewModel.searchOnlineSatellite(geminiSearchInput) }
-                )
-            }
+
         }
     }
 }
@@ -828,7 +788,8 @@ fun FilterDialog(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(20.dp),
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.End
             ) {
@@ -1082,7 +1043,7 @@ fun FilterDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
 
@@ -1129,228 +1090,34 @@ fun FilterCategoryTitle(title: String) {
     )
 }
 
-// Dialog for Gemini API deep parsing of nanosats.eu database
-@Composable
-fun GeminiSearchDialog(
-    onDismiss: () -> Unit,
-    inputValue: String,
-    onInputValueChange: (String) -> Unit,
-    geminiState: GeminiSearchState,
-    onTriggerSearch: () -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = SpaceCard,
-            contentColor = PrimaryText,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.End
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, "Dismiss", tint = SecondaryText)
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(Icons.Default.Star, "AI", tint = SolidPrimary)
-                        Text(
-                            "جستجوی زنده با هوش مصنوعی",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = SolidPrimary
-                        )
-                    }
-                }
 
-                HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
-
-                if (!GeminiClient.isApiKeyConfigured()) {
-                    // Help note for missing key
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(FailureRed.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                            .border(1.dp, FailureRed.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                            .padding(12.dp)
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                "کلید API یافت نشد!",
-                                color = FailureRed,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Right
-                            )
-                            Text(
-                                "برای جستجوی هوشمند، باید کلید خود را با نام GEMINI_API_KEY در بخش Secrets در Google AI Studio وارد کنید.",
-                                color = SecondaryText,
-                                fontSize = 11.sp,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Right
-                            )
-                        }
-                    }
-                } else {
-                    Text(
-                        "اگر نام ماهواره یا سازمان فضایی در کاتالوگ نیست، بنویسید تا جمینای مستقیماً مشخصات آن را استخراج و برای شما وارد کند:",
-                        fontSize = 12.sp,
-                        color = SecondaryText,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Right
-                    )
-
-                    OutlinedTextField(
-                        value = inputValue,
-                        onValueChange = onInputValueChange,
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("مثلاً: Capella-3 یا AlSat-2 ...", color = Color.Gray, fontSize = 13.sp) },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = SolidPrimary,
-                            unfocusedBorderColor = SearchBackground,
-                            focusedTextColor = PrimaryText,
-                            unfocusedTextColor = PrimaryText,
-                            focusedContainerColor = SearchBackground,
-                            unfocusedContainerColor = SearchBackground
-                        ),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-
-                    // Operational progress UI
-                    AnimatedContent(targetState = geminiState) { state ->
-                        when (state) {
-                            is GeminiSearchState.Idle -> {
-                                Button(
-                                    onClick = onTriggerSearch,
-                                    enabled = inputValue.isNotBlank(),
-                                    colors = ButtonDefaults.buttonColors(containerColor = SolidPrimary, contentColor = Color.White),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(Icons.Default.Search, "Search Online")
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("شروع جستجوی هوشمند جدید", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                            is GeminiSearchState.Loading -> {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    CircularProgressIndicator(color = SolidPrimary)
-                                    Text(
-                                        "درحال اسکن دیتابیس nanosats.eu و استخراج اطلاعات ماهواره...",
-                                        fontSize = 11.sp,
-                                        color = SolidPrimary,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            }
-                            is GeminiSearchState.Success -> {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(ActiveGreen.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.CheckCircle, "Success", tint = ActiveGreen)
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            "با موفقیت اضافه شد!",
-                                            color = ActiveGreen,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            modifier = Modifier.fillMaxWidth(),
-                                            textAlign = TextAlign.Right
-                                        )
-                                        Text(
-                                            "ماهواره ${state.satellite.name} با مشخصات استخراج شده به کاتالوگ شما متصل شد.",
-                                            color = SecondaryText,
-                                            fontSize = 11.sp,
-                                            modifier = Modifier.fillMaxWidth(),
-                                            textAlign = TextAlign.Right
-                                        )
-                                    }
-                                }
-                            }
-                            is GeminiSearchState.Error -> {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(FailureRed.copy(alpha = 0.12f), RoundedCornerShape(10.dp))
-                                        .border(1.dp, FailureRed.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                                        .padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text(
-                                        "خطا در دریافت اطلاعات",
-                                        color = FailureRed,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Right
-                                    )
-                                    Text(
-                                        state.message,
-                                        color = SecondaryText,
-                                        fontSize = 11.sp,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Right
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Button(
-                                        onClick = onTriggerSearch,
-                                        colors = ButtonDefaults.buttonColors(containerColor = FailureRed, contentColor = Color.White),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text("تلاش مجدد", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 // Translate orbit status to beautifully styled Persian text description
 fun translateStatus(status: String): String {
-    return when (status.lowercase()) {
-        "orbiting" -> "فعال در مدار"
-        "de-orbiting", "de-orbited" -> "خارج‌شده از مدار"
-        "decayed" -> "سوخته در جو"
-        "launch failure" -> "شکست در پرتاب"
+    val low = status.lowercase()
+    return when {
+        low.contains("orbiting") && low.contains("operational") -> "فعال در مدار"
+        low.contains("orbiting") -> "مستقر در مدار"
+        low.contains("reentered") && low.contains("was operational") -> "سوخته در جو (قبلاً فعال)"
+        low.contains("reentered") && low.contains("operational") -> "سوخته در جو (عملیاتی)"
+        low.contains("reentered") -> "خارج‌شده از جو (سوخته)"
+        low.contains("decayed") -> "سوخته در جو"
+        low.contains("launch failure") -> "شکست در پرتاب"
+        low.contains("no signal") -> "بدون سیگنال"
+        low.contains("was operational") -> "غیرفعال (قبلاً عملیاتی)"
+        low.contains("operational") -> "عملیاتی فعال"
         else -> status
     }
 }
 
 // Style different status colors uniformly over the applet UI
 fun statusToColor(status: String): Color {
-    return when (status.lowercase()) {
-        "orbiting" -> ActiveGreen
-        "de-orbiting", "de-orbited" -> DeorbitedSlate
-        "decayed" -> DecayedOrange
-        "launch failure" -> FailureRed
+    val low = status.lowercase()
+    return when {
+        low.contains("orbiting") || low.contains("operational") && !low.contains("was") -> ActiveGreen
+        low.contains("reentered") || low.contains("decayed") -> DecayedOrange
+        low.contains("no signal") || low.contains("lost") -> DeorbitedSlate
+        low.contains("launch failure") -> FailureRed
         else -> Color.Gray
     }
 }

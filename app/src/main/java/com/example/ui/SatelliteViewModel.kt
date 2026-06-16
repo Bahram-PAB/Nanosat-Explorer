@@ -3,7 +3,6 @@ package com.example.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.api.GeminiClient
 import com.example.data.AppDatabase
 import com.example.data.Satellite
 import com.example.data.SatelliteRepository
@@ -12,13 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-sealed interface GeminiSearchState {
-    object Idle : GeminiSearchState
-    object Loading : GeminiSearchState
-    data class Success(val satellite: Satellite) : GeminiSearchState
-    data class Error(val message: String) : GeminiSearchState
-}
 
 class SatelliteViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -36,10 +28,6 @@ class SatelliteViewModel(application: Application) : AndroidViewModel(applicatio
     // Current selected satellite detail
     private val _selectedSatellite = MutableStateFlow<Satellite?>(null)
     val selectedSatellite: StateFlow<Satellite?> = _selectedSatellite.asStateFlow()
-
-    // Gemini search operational state
-    private val _geminiSearchState = MutableStateFlow<GeminiSearchState>(GeminiSearchState.Idle)
-    val geminiSearchState: StateFlow<GeminiSearchState> = _geminiSearchState.asStateFlow()
 
     // Combined filtered list
     val uiState: StateFlow<List<Satellite>>
@@ -161,58 +149,5 @@ class SatelliteViewModel(application: Application) : AndroidViewModel(applicatio
         selectedMissionType.value = null
         showOnlyFavorites.value = false
         searchQuery.value = ""
-    }
-
-    fun resetGeminiState() {
-        _geminiSearchState.value = GeminiSearchState.Idle
-    }
-
-    /**
-     * Conducts a detailed lookup via Gemini for any nanosatellite from the nanosats.eu database.
-     * On success, imports it into the local database and automatically opens its detail view!
-     */
-    fun searchOnlineSatellite(name: String) {
-        if (name.isBlank()) return
-
-        viewModelScope.launch {
-            _geminiSearchState.value = GeminiSearchState.Loading
-            try {
-                // Call Gemini REST Service
-                val result = withContext(Dispatchers.IO) {
-                    GeminiClient.querySatelliteInfo(name)
-                }
-
-                // Map results to database entity
-                val newSatellite = Satellite(
-                    name = result.name,
-                    unitSize = result.unitSize,
-                    weightKg = result.weightKg,
-                    launchCountry = result.launchCountry,
-                    launchAgency = result.launchAgency,
-                    launchDate = result.launchDate,
-                    status = result.status,
-                    description = result.description,
-                    missionObjective = result.missionObjective,
-                    imageUrl = result.imageUrl,
-                    isCustom = true
-                )
-
-                // Save to local database
-                val insertedId = withContext(Dispatchers.IO) {
-                    repository.insert(newSatellite)
-                }
-
-                // Retrieve the inserted record
-                val savedSatellite = repository.getSatelliteById(insertedId.toInt()) ?: newSatellite.copy(id = insertedId.toInt())
-
-                _geminiSearchState.value = GeminiSearchState.Success(savedSatellite)
-                _selectedSatellite.value = savedSatellite
-
-            } catch (e: Exception) {
-                _geminiSearchState.value = GeminiSearchState.Error(
-                    e.message ?: "An unknown error occurred while retrieving satellite specs."
-                )
-            }
-        }
     }
 }

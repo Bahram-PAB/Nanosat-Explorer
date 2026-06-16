@@ -127,7 +127,9 @@ class SatelliteRepository(private val satelliteDao: SatelliteDao) {
         try {
             context.assets.open("satellite-database.json").use { inputStream ->
                 val jsonString = inputStream.reader().use { it.readText() }
-                val jsonArray = JSONArray(jsonString)
+                // Remove trailing commas gracefully using Regex so that standard Android org.json reader won't fail
+                val cleanedJson = jsonString.replace(Regex(",\\s*([\\}\\]])"), "$1")
+                val jsonArray = JSONArray(cleanedJson)
                 for (i in 0 until jsonArray.length()) {
                     val obj = jsonArray.getJSONObject(i)
                     val missionName = obj.optString("Mission name", "")
