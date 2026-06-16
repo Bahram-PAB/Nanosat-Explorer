@@ -69,6 +69,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
     val context = LocalContext.current
+    val isEnglish by viewModel.isEnglish.collectAsStateWithLifecycle()
     val satellites by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedUnit by viewModel.selectedUnitSize.collectAsStateWithLifecycle()
@@ -141,7 +142,6 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                 .padding(innerPadding)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Top Search Box replaced with Advanced Filter triggers
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -152,41 +152,52 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Left side: Advanced Filter icon indicator with badge
-                    Box {
-                        if (isAnyFilterApplied) {
-                            Badge(
-                                containerColor = SolidPrimary,
-                                contentColor = SpaceBackground,
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = 6.dp, y = (-6).dp)
-                            ) {
-                                var count = 0
-                                if (selectedUnit != null) count++
-                                if (selectedWeight != null) count++
-                                if (selectedStatus != null) count++
-                                if (selectedCountry != null) count++
-                                if (showOnlyFavorites) count++
-                                if (selectedMissionType != null) count++
-                                Text(count.toString(), fontWeight = FontWeight.Bold)
+                    val filterIconBlock = @Composable {
+                        Box {
+                            if (isAnyFilterApplied) {
+                                Badge(
+                                    containerColor = SolidPrimary,
+                                    contentColor = SpaceBackground,
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = 6.dp, y = (-6).dp)
+                                ) {
+                                    var count = 0
+                                    if (selectedUnit != null) count++
+                                    if (selectedWeight != null) count++
+                                    if (selectedStatus != null) count++
+                                    if (selectedCountry != null) count++
+                                    if (showOnlyFavorites) count++
+                                    if (selectedMissionType != null) count++
+                                    Text(count.toString(), fontWeight = FontWeight.Bold)
+                                }
                             }
+                            Icon(
+                                imageVector = Icons.Default.List,
+                                contentDescription = if (isEnglish) "Advanced Filters" else "فیلترهای پیشرفته",
+                                tint = if (isAnyFilterApplied) SolidPrimary else SecondaryText,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
-                        Icon(
-                            imageVector = Icons.Default.List,
-                            contentDescription = "Advanced Filters",
-                            tint = if (isAnyFilterApplied) SolidPrimary else SecondaryText,
-                            modifier = Modifier.size(24.dp)
-                        )
                     }
 
-                    // Right side: Persian text "فیلترهای پیشرفته"
-                    Text(
-                        text = "فیلترهای پیشرفته",
-                        color = PrimaryText,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (isEnglish) {
+                        Text(
+                            text = "Advanced Filters",
+                            color = PrimaryText,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        filterIconBlock()
+                    } else {
+                        filterIconBlock()
+                        Text(
+                            text = "فیلترهای پیشرفته",
+                            color = PrimaryText,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 // Horizontal Active Filter badging indicators
@@ -213,7 +224,7 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                         }
                         if (selectedStatus != null) {
                             item {
-                                FilterChipIndicator(label = translateStatus(selectedStatus!!)) {
+                                FilterChipIndicator(label = translateStatus(selectedStatus!!, isEnglish)) {
                                     viewModel.selectedStatus.value = null
                                 }
                             }
@@ -227,14 +238,14 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                         }
                         if (selectedMissionType != null) {
                             item {
-                                FilterChipIndicator(label = selectedMissionType!!) {
+                                FilterChipIndicator(label = translateMissionType(selectedMissionType!!, isEnglish)) {
                                     viewModel.selectedMissionType.value = null
                                 }
                             }
                         }
                         if (showOnlyFavorites) {
                             item {
-                                FilterChipIndicator(label = "★ نشان شده‌ها") {
+                                FilterChipIndicator(label = if (isEnglish) "★ Bookmarked" else "★ نشان شده‌ها") {
                                     viewModel.showOnlyFavorites.value = false
                                 }
                             }
@@ -242,7 +253,7 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                     }
                 }
 
-                // Live Results stats bar (Persian labels)
+                // Live Results stats bar (Bilingual labels)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -251,14 +262,14 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "یافت شده: ${satellites.size} مورد",
+                        text = if (isEnglish) "Found: ${satellites.size} items" else "یافت شده: ${satellites.size} مورد",
                         color = SecondaryText,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
 
                     Text(
-                        text = "تعداد کل ماهواره‌ها: $totalCount",
+                        text = if (isEnglish) "Total Satellites: $totalCount" else "تعداد کل ماهواره‌ها: $totalCount",
                         color = SecondaryText,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
@@ -285,7 +296,11 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                                 modifier = Modifier.size(64.dp)
                             )
                             Text(
-                                "ماهواره‌ای با این مشخصات در کاتالوگ محلی یافت نشد.",
+                                text = if (isEnglish) {
+                                    "No satellites matching these specifications found in the local catalog."
+                                } else {
+                                    "ماهواره‌ای با این مشخصات در کاتالوگ محلی یافت نشد."
+                                },
                                 color = SecondaryText,
                                 fontSize = 14.sp,
                                 textAlign = TextAlign.Center
@@ -304,6 +319,7 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                         items(satellites) { satellite ->
                             SatelliteCard(
                                 satellite = satellite,
+                                isEnglish = isEnglish,
                                 onSelect = { viewModel.selectSatellite(satellite) },
                                 onToggleFavorite = { viewModel.toggleFavorite(satellite) }
                             )
@@ -357,13 +373,30 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                         }
                     }
 
-                    // Right side (version text)
-                    Text(
-                        text = "نسخه ۴.۱",
-                        color = SecondaryText,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    // Right side: Version & Language toggle icon with appropriate spacing
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Version 4.2" else "نسخه ۴.۲",
+                            color = SecondaryText,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+
+                        IconButton(
+                            onClick = { viewModel.toggleLanguage() },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Language,
+                                contentDescription = if (isEnglish) "Switch Language" else "تغییر زبان",
+                                tint = SolidPrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -377,11 +410,13 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                 selectedSatellite?.let { satellite ->
                     SatelliteDetailView(
                         satellite = satellite,
+                        isEnglish = isEnglish,
                         onClose = { viewModel.selectSatellite(null) },
                         onToggleFavorite = { viewModel.toggleFavorite(satellite) },
                         onDelete = {
                             viewModel.deleteSatellite(satellite)
-                            Toast.makeText(context, "از پایگاه داده حذف شد", Toast.LENGTH_SHORT).show()
+                            val deleteText = if (isEnglish) "Removed from local database" else "از پایگاه داده حذف شد"
+                            Toast.makeText(context, deleteText, Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
@@ -391,6 +426,7 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
             if (showFilterDialog) {
                 FilterDialog(
                     onDismiss = { showFilterDialog = false },
+                    isEnglish = isEnglish,
                     countriesList = countries,
                     selectedUnit = selectedUnit,
                     onSelectUnit = { viewModel.selectedUnitSize.value = it },
@@ -440,7 +476,7 @@ fun FilterChipIndicator(label: String, onRemove: () -> Unit) {
 }
 
 @Composable
-fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit, onToggleFavorite: () -> Unit) {
+fun SatelliteCard(satellite: Satellite, isEnglish: Boolean, onSelect: () -> Unit, onToggleFavorite: () -> Unit) {
     val statusColor = statusToColor(satellite.status)
 
     Card(
@@ -463,6 +499,7 @@ fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit, onToggleFavorite: 
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Determine order or alignment dynamically. Standard LTR name on Left, badge on Right
                 Text(
                     text = satellite.name,
                     color = PrimaryText,
@@ -470,7 +507,8 @@ fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit, onToggleFavorite: 
                     fontSize = 16.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    textAlign = if (isEnglish) TextAlign.Left else TextAlign.Right
                 )
 
                 // Favorite Toggle Star Button
@@ -480,7 +518,7 @@ fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit, onToggleFavorite: 
                 ) {
                     Icon(
                         imageVector = if (satellite.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                        contentDescription = "Toggle Favorite",
+                        contentDescription = if (isEnglish) "Toggle Favorite" else "نشان کردن",
                         tint = if (satellite.isFavorite) Color.Yellow else Color.White.copy(alpha = 0.35f),
                         modifier = Modifier.size(20.dp)
                     )
@@ -510,7 +548,9 @@ fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit, onToggleFavorite: 
                 color = SecondaryText,
                 fontSize = 12.sp,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = if (isEnglish) TextAlign.Left else TextAlign.Right
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -551,7 +591,7 @@ fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit, onToggleFavorite: 
                             .background(statusColor)
                     )
                     Text(
-                        text = translateStatus(satellite.status),
+                        text = translateStatus(satellite.status, isEnglish),
                         color = statusColor,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
@@ -565,6 +605,7 @@ fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit, onToggleFavorite: 
 @Composable
 fun SatelliteDetailView(
     satellite: Satellite,
+    isEnglish: Boolean,
     onClose: () -> Unit,
     onToggleFavorite: () -> Unit,
     onDelete: () -> Unit
@@ -593,18 +634,7 @@ fun SatelliteDetailView(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier
-                            .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(20.dp))
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White
-                        )
-                    }
-
+                    // Left side details actions: Delete custom and Toggle Favorite
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (satellite.isCustom) {
                             IconButton(
@@ -614,7 +644,7 @@ fun SatelliteDetailView(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
-                                    contentDescription = "Delete custom import",
+                                    contentDescription = if (isEnglish) "Delete" else "حذف",
                                     tint = FailureRed
                                 )
                             }
@@ -626,11 +656,24 @@ fun SatelliteDetailView(
                                 .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(20.dp))
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Favorite",
+                                imageVector = if (satellite.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                contentDescription = if (isEnglish) "Favorite" else "نشان کردن",
                                 tint = if (satellite.isFavorite) Color.Yellow else Color.White.copy(alpha = 0.5f)
                             )
                         }
+                    }
+
+                    // Right side: Straight right-pointing arrow to return to Home (or Left back arrow for English LTR)
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier
+                            .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(20.dp))
+                    ) {
+                        Icon(
+                            imageVector = if (isEnglish) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.ArrowForward,
+                            contentDescription = if (isEnglish) "Back to Home" else "برگشت به خانه",
+                            tint = Color.White
+                        )
                     }
                 }
 
@@ -641,34 +684,57 @@ fun SatelliteDetailView(
                         .padding(horizontal = 24.dp)
                 ) {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = if (isEnglish) Arrangement.Start else Arrangement.End
                     ) {
-                        Text(
-                            text = satellite.name,
-                            color = PrimaryText,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 26.sp,
-                            fontFamily = FontFamily.SansSerif,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        if (satellite.isCustom) {
-                            Box(
-                                modifier = Modifier
-                                    .border(1.dp, SolidPrimary, RoundedCornerShape(4.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text("AI SYNC", color = SolidPrimary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                        if (isEnglish) {
+                            Text(
+                                text = satellite.name,
+                                color = PrimaryText,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 26.sp,
+                                fontFamily = FontFamily.SansSerif,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (satellite.isCustom) {
+                                Box(
+                                    modifier = Modifier
+                                        .border(1.dp, SolidPrimary, RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text("AI SYNC", color = SolidPrimary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
+                        } else {
+                            if (satellite.isCustom) {
+                                Box(
+                                    modifier = Modifier
+                                        .border(1.dp, SolidPrimary, RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text("AI SYNC", color = SolidPrimary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            Text(
+                                text = satellite.name,
+                                color = PrimaryText,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 26.sp,
+                                fontFamily = FontFamily.SansSerif,
+                                textAlign = TextAlign.Right,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = if (isEnglish) Arrangement.Start else Arrangement.End
                     ) {
                         Box(
                             modifier = Modifier
@@ -676,8 +742,13 @@ fun SatelliteDetailView(
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(statusColor)
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "وضعیت: " + translateStatus(satellite.status),
+                            text = if (isEnglish) {
+                                "Status: " + translateStatus(satellite.status, true)
+                            } else {
+                                "وضعیت: " + translateStatus(satellite.status, false)
+                            },
                             color = statusColor,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
@@ -697,12 +768,12 @@ fun SatelliteDetailView(
                 // Specifications Grid Section
                 item {
                     Text(
-                        "مشخصات فنی و فیزیکی",
+                        text = if (isEnglish) "Technical and Physical Specifications" else "مشخصات فنی و فیزیکی",
                         color = SolidPrimary,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp,
                         modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Right
+                        textAlign = if (isEnglish) TextAlign.Left else TextAlign.Right
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -710,16 +781,46 @@ fun SatelliteDetailView(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SpecItemBox(modifier = Modifier.weight(1f), title = "اندازه بدنه", valString = satellite.unitSize, icon = Icons.Default.Info)
-                            SpecItemBox(modifier = Modifier.weight(1f), title = "وزن کل (جرم)", valString = "${satellite.weightKg} kg", icon = Icons.Default.Build)
+                            SpecItemBox(
+                                modifier = Modifier.weight(1f),
+                                title = if (isEnglish) "Unit Size" else "اندازه بدنه",
+                                valString = satellite.unitSize,
+                                icon = Icons.Default.Info
+                            )
+                            SpecItemBox(
+                                modifier = Modifier.weight(1f),
+                                title = if (isEnglish) "Total Mass" else "وزن کل (جرم)",
+                                valString = "${satellite.weightKg} kg",
+                                icon = Icons.Default.Build
+                            )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SpecItemBox(modifier = Modifier.weight(1f), title = "کشور سازنده", valString = satellite.launchCountry, icon = Icons.Default.LocationOn)
-                            SpecItemBox(modifier = Modifier.weight(1f), title = "تاریخ پرتاب", valString = satellite.launchDate, icon = Icons.Default.DateRange)
+                            SpecItemBox(
+                                modifier = Modifier.weight(1f),
+                                title = if (isEnglish) "Country" else "کشور سازنده",
+                                valString = satellite.launchCountry,
+                                icon = Icons.Default.LocationOn
+                            )
+                            SpecItemBox(
+                                modifier = Modifier.weight(1f),
+                                title = if (isEnglish) "Launch Date" else "تاریخ پرتاب",
+                                valString = satellite.launchDate,
+                                icon = Icons.Default.DateRange
+                            )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SpecItemBox(modifier = Modifier.weight(1f), title = "سازمان / اپراتور", valString = satellite.launchAgency, icon = Icons.Default.Home)
-                            SpecItemBox(modifier = Modifier.weight(1f), title = "نوع ماموریت", valString = satellite.missionType, icon = Icons.Default.Star)
+                            SpecItemBox(
+                                modifier = Modifier.weight(1f),
+                                title = if (isEnglish) "Agency/Operator" else "سازمان / اپراتور",
+                                valString = satellite.launchAgency,
+                                icon = Icons.Default.Home
+                            )
+                            SpecItemBox(
+                                modifier = Modifier.weight(1f),
+                                title = if (isEnglish) "Mission Type" else "نوع ماموریت",
+                                valString = translateMissionType(satellite.missionType, isEnglish),
+                                icon = Icons.Default.Star
+                            )
                         }
                     }
                 }
@@ -729,12 +830,12 @@ fun SatelliteDetailView(
                     HorizontalDivider(color = LightBorder)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "هدف اصلی ماموریت",
+                        text = if (isEnglish) "Primary Mission Objective" else "هدف اصلی ماموریت",
                         color = SolidPrimary,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp,
                         modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Right
+                        textAlign = if (isEnglish) TextAlign.Left else TextAlign.Right
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -743,7 +844,7 @@ fun SatelliteDetailView(
                         fontSize = 14.sp,
                         lineHeight = 22.sp,
                         modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Right
+                        textAlign = if (isEnglish) TextAlign.Left else TextAlign.Right
                     )
                 }
 
@@ -752,12 +853,12 @@ fun SatelliteDetailView(
                     HorizontalDivider(color = LightBorder)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "جزئیات و درباره ماهواره",
+                        text = if (isEnglish) "Details and About Satellite" else "جزئیات و درباره ماهواره",
                         color = SolidPrimary,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp,
                         modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Right
+                        textAlign = if (isEnglish) TextAlign.Left else TextAlign.Right
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -766,7 +867,7 @@ fun SatelliteDetailView(
                         fontSize = 13.sp,
                         lineHeight = 22.sp,
                         modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Right
+                        textAlign = if (isEnglish) TextAlign.Left else TextAlign.Right
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -797,6 +898,7 @@ fun SpecItemBox(modifier: Modifier = Modifier, title: String, valString: String,
 @Composable
 fun FilterDialog(
     onDismiss: () -> Unit,
+    isEnglish: Boolean,
     countriesList: List<String>,
     selectedUnit: String?,
     onSelectUnit: (String?) -> Unit,
@@ -826,7 +928,7 @@ fun FilterDialog(
                     .padding(20.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.End
+                horizontalAlignment = if (isEnglish) Alignment.Start else Alignment.End
             ) {
                 // Header
                 Row(
@@ -834,15 +936,27 @@ fun FilterDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, "Close", tint = SecondaryText)
+                    if (isEnglish) {
+                        Text(
+                            text = "Advanced Filters",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = SolidPrimary
+                        )
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, "Close", tint = SecondaryText)
+                        }
+                    } else {
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, "Close", tint = SecondaryText)
+                        }
+                        Text(
+                            text = "فیلترهای پیشرفته",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = SolidPrimary
+                        )
                     }
-                    Text(
-                        "فیلترهای پیشرفته",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = SolidPrimary
-                    )
                 }
 
                 HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
@@ -856,21 +970,38 @@ fun FilterDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Switch(
-                        checked = showFavorites,
-                        onCheckedChange = { onToggleFavorites(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = SolidPrimary,
-                            checkedTrackColor = SolidPrimary.copy(alpha = 0.4f),
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = LightBorder
+                    if (isEnglish) {
+                        Text(text = "Show Bookmarked (★)", color = PrimaryText, fontSize = 14.sp)
+                        Switch(
+                            checked = showFavorites,
+                            onCheckedChange = { onToggleFavorites(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = SolidPrimary,
+                                checkedTrackColor = SolidPrimary.copy(alpha = 0.4f),
+                                uncheckedThumbColor = Color.White,
+                                uncheckedTrackColor = LightBorder
+                            )
                         )
-                    )
-                    Text("نمایش نشان شده‌ها (★)", color = PrimaryText, fontSize = 14.sp)
+                    } else {
+                        Switch(
+                            checked = showFavorites,
+                            onCheckedChange = { onToggleFavorites(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = SolidPrimary,
+                                checkedTrackColor = SolidPrimary.copy(alpha = 0.4f),
+                                uncheckedThumbColor = Color.White,
+                                uncheckedTrackColor = LightBorder
+                            )
+                        )
+                        Text(text = "نمایش نشان شده‌ها (★)", color = PrimaryText, fontSize = 14.sp)
+                    }
                 }
 
                 // 1. Satellite Unit Filter
-                FilterCategoryTitle("اندازه ماهواره (یونیت CubeSat)")
+                FilterCategoryTitle(
+                    title = if (isEnglish) "Satellite Size (CubeSat Unit)" else "اندازه ماهواره (یونیت CubeSat)",
+                    isEnglish = isEnglish
+                )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -898,7 +1029,10 @@ fun FilterDialog(
                 }
 
                 // 2. Mass/Weight Range
-                FilterCategoryTitle("محدوده وزن ماهواره")
+                FilterCategoryTitle(
+                    title = if (isEnglish) "Satellite Weight Range" else "محدوده وزن ماهواره",
+                    isEnglish = isEnglish
+                )
                 val limits = listOf("Micro (< 1.5kg)", "Light (1.5 - 5kg)", "Medium (5 - 20kg)", "Heavy (> 20kg)")
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -948,7 +1082,10 @@ fun FilterDialog(
                 }
 
                 // 3. Status
-                FilterCategoryTitle("وضعیت مداری")
+                FilterCategoryTitle(
+                    title = if (isEnglish) "Orbital Status" else "وضعیت مداری",
+                    isEnglish = isEnglish
+                )
                 val statuses = listOf("Orbiting", "De-orbited", "Decayed", "Launch Failure")
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -965,7 +1102,7 @@ fun FilterDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = translateStatus(stat),
+                                    text = translateStatus(stat, isEnglish),
                                     color = if (isSel) SpaceBackground else PrimaryText,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
@@ -987,7 +1124,7 @@ fun FilterDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = translateStatus(stat),
+                                    text = translateStatus(stat, isEnglish),
                                     color = if (isSel) SpaceBackground else PrimaryText,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
@@ -998,9 +1135,16 @@ fun FilterDialog(
                 }
 
                 // 4. Country of Origin (Dynamic List & Scroll)
-                FilterCategoryTitle("کشور سازنده / پرتاب‌کننده")
+                FilterCategoryTitle(
+                    title = if (isEnglish) "Country of Origin/Launcher" else "کشور سازنده / پرتاب‌کننده",
+                    isEnglish = isEnglish
+                )
                 if (countriesList.isEmpty()) {
-                    Text("کشور فعالی ثبت نشده است", color = Color.Gray, fontSize = 11.sp)
+                    Text(
+                        text = if (isEnglish) "No active countries found" else "کشور فعالی ثبت نشده است",
+                        color = Color.Gray,
+                        fontSize = 11.sp
+                    )
                 } else {
                     LazyRow(
                         modifier = Modifier.fillMaxWidth(),
@@ -1029,7 +1173,10 @@ fun FilterDialog(
                 }
 
                 // 5. Mission Type
-                FilterCategoryTitle("نوع ماموریت")
+                FilterCategoryTitle(
+                    title = if (isEnglish) "Mission Type" else "نوع ماموریت",
+                    isEnglish = isEnglish
+                )
                 val missionTypes = listOf("علمی و تحقیقاتی", "تست فناوری", "سنجش از دور", "ارتباطات و مخابرات")
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1046,7 +1193,7 @@ fun FilterDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = mt,
+                                    text = translateMissionType(mt, isEnglish),
                                     color = if (isSel) SpaceBackground else PrimaryText,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
@@ -1068,7 +1215,7 @@ fun FilterDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = mt,
+                                    text = translateMissionType(mt, isEnglish),
                                     color = if (isSel) SpaceBackground else PrimaryText,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
@@ -1094,7 +1241,12 @@ fun FilterDialog(
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("پاک کردن همه", color = FailureRed, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (isEnglish) "Clear All" else "پاک کردن همه",
+                            color = FailureRed,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
                     Button(
@@ -1103,7 +1255,11 @@ fun FilterDialog(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("اعمال فیلترها", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (isEnglish) "Apply Filters" else "اعمال فیلترها",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -1112,7 +1268,7 @@ fun FilterDialog(
 }
 
 @Composable
-fun FilterCategoryTitle(title: String) {
+fun FilterCategoryTitle(title: String, isEnglish: Boolean = false) {
     Text(
         text = title,
         color = Color.LightGray,
@@ -1121,15 +1277,30 @@ fun FilterCategoryTitle(title: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 4.dp),
-        textAlign = TextAlign.Right
+        textAlign = if (isEnglish) TextAlign.Left else TextAlign.Right
     )
 }
 
 
 
-// Translate orbit status to beautifully styled Persian text description
-fun translateStatus(status: String): String {
+// Translate orbit status to beautifully styled Persian or English text description
+fun translateStatus(status: String, isEnglish: Boolean = false): String {
     val low = status.lowercase()
+    if (isEnglish) {
+        return when {
+            low.contains("orbiting") && low.contains("operational") -> "Orbiting (Operational)"
+            low.contains("orbiting") -> "Orbiting"
+            low.contains("reentered") && low.contains("was operational") -> "Reentered (Was Operational)"
+            low.contains("reentered") && low.contains("operational") -> "Reentered (Operational)"
+            low.contains("reentered") -> "Reentered (Decayed)"
+            low.contains("decayed") -> "Decayed"
+            low.contains("launch failure") -> "Launch Failure"
+            low.contains("no signal") -> "No Signal"
+            low.contains("was operational") -> "Inactive (Was Operational)"
+            low.contains("operational") -> "Operational"
+            else -> status
+        }
+    }
     return when {
         low.contains("orbiting") && low.contains("operational") -> "فعال در مدار"
         low.contains("orbiting") -> "مستقر در مدار"
@@ -1142,6 +1313,17 @@ fun translateStatus(status: String): String {
         low.contains("was operational") -> "غیرفعال (قبلاً عملیاتی)"
         low.contains("operational") -> "عملیاتی فعال"
         else -> status
+    }
+}
+
+fun translateMissionType(missionType: String, isEnglish: Boolean): String {
+    if (!isEnglish) return missionType
+    return when (missionType) {
+        "علمی و تحقیقاتی" -> "Scientific/Research"
+        "تست فناوری" -> "Technology Demo"
+        "سنجش از دور" -> "Remote Sensing"
+        "ارتباطات و مخابرات" -> "Communications"
+        else -> missionType
     }
 }
 

@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.AppDatabase
@@ -15,6 +16,16 @@ import kotlinx.coroutines.withContext
 class SatelliteViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: SatelliteRepository
+    
+    // SharedPreferences for persistent language setting
+    private val prefs = application.getSharedPreferences("nanosat_prefs", Context.MODE_PRIVATE)
+    val isEnglish = MutableStateFlow(prefs.getBoolean("is_english", false))
+
+    fun toggleLanguage() {
+        val newVal = !isEnglish.value
+        isEnglish.value = newVal
+        prefs.edit().putBoolean("is_english", newVal).apply()
+    }
     
     // UI input states
     val searchQuery = MutableStateFlow("")
