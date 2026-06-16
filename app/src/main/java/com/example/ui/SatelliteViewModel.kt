@@ -3,122 +3,154 @@ package com.example.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.api.GeminiClient
+import com.example.data.AppDatabase
 import com.example.data.Satellite
+import com.example.data.SatelliteRepository
+import com.example.data.missionType
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import java.util.UUID
 
 sealed interface GeminiSearchState {
     object Idle : GeminiSearchState
     object Loading : GeminiSearchState
-    data class Success(val response: String) : GeminiSearchState
+    data class Success(val satellite: Satellite) : GeminiSearchState
     data class Error(val message: String) : GeminiSearchState
 }
 
 class SatelliteViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _allSatellites = MutableStateFlow<List<Satellite>>(emptyList())
-    val allSatellites: StateFlow<List<Satellite>> = _allSatellites
-
-    // تعریف متغیرها به صورت StateFlow جهت هماهنگی کامل با MainActivity
+    private val repository: SatelliteRepository
+    
+    // UI input states
     val searchQuery = MutableStateFlow("")
     val selectedUnitSize = MutableStateFlow<String?>(null)
-    val selectedWeightRange = MutableStateFlow<String?>(null)
-    val selectedStatus = MutableStateFlow<String?>(null)
+    val selectedWeightRange = MutableStateFlow<String?>(null) // "Micro", "Light", "Medium", "Heavy"
+    val selectedStatus = MutableStateFlow<String?>(null)     // "Orbiting", "De-orbited", "Decayed", "Launch Failure"
     val selectedCountry = MutableStateFlow<String?>(null)
     val selectedMissionType = MutableStateFlow<String?>(null)
     val showOnlyFavorites = MutableStateFlow(false)
-    
+
+    // Current selected satellite detail
     private val _selectedSatellite = MutableStateFlow<Satellite?>(null)
-    val selectedSatellite: StateFlow<Satellite?> = _selectedSatellite
+    val selectedSatellite: StateFlow<Satellite?> = _selectedSatellite.asStateFlow()
 
+    // Gemini search operational state
     private val _geminiSearchState = MutableStateFlow<GeminiSearchState>(GeminiSearchState.Idle)
-    val geminiSearchState: StateFlow<GeminiSearchState> = _geminiSearchState
+    val geminiSearchState: StateFlow<GeminiSearchState> = _geminiSearchState.asStateFlow()
 
-    // ترکیب فیلترها و تولید خودکار لیست نهایی برای نمایش در UI
-    val uiState: StateFlow<List<Satellite>> = combine(
-        _allSatellites, searchQuery, selectedCountry, selectedStatus, showOnlyFavorites
-    ) { list, query, country, status, favOnly ->
-        var filtered = list
-        if (query.isNotEmpty()) {
-            filtered = filtered.filter { it.name.contains(query, ignoreCase = true) }
-        }
-        if (country != null) {
-            filtered = filtered.filter { it.launchCountry == country }
-        }
-        if (status != null) {
-            filtered = filtered.filter { it.status == status }
-        }
-        if (favOnly) {
-            filtered = filtered.filter { it.isFavorite }
-        }
-        filtered
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Combined filtered list
+    val uiState: StateFlow<List<Satellite>>
 
-    val totalCount: StateFlow<Int> = combine(uiState) { it.size }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
-    val availableCountries: StateFlow<List<String>> = combine(_allSatellites) { list ->
-        list.map { it.launchCountry }.distinct().sorted()
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Live list of all countries for filter dropdown
+    val availableCountries: StateFlow<List<String>>
 
     init {
-        loadSatellitesFromJson()
+        val database = AppDatabase.getDatabase(application)
+        repository = SatelliteRepository(database.satelliteDao())
+
+        // Ensure database template is populated from JSON asset
+        viewModelScope.launch {
+            repository.ensurePopulated(application)
+        }
+
+        // Group filters in type-safe bundles to support combine flow overloads cleanly
+        val filterGroup1 = combine(
+            searchQuery,
+            selectedUnitSize,
+            selectedWeightRange
+        ) { query, unit, weight ->
+            Triple(query, unit, weight)
+        }
+
+        val filterGroup2 = combine(
+            selectedStatus,
+            selectedCountry,
+            showOnlyFavorites
+        ) { status, country, favorites ->
+            Triple(status, country, favorites)
+        }
+
+        // Live filtering combining all inputs
+        uiState = combine(
+            repository.allSatellites,
+            filterGroup1,
+            filterGroup2,
+            selectedMissionType
+        ) { list, g1, g2, missionType ->
+            val (query, unit, weight) = g1
+            val (status, country, favorites) = g2
+            list.filter { sat ->
+                // 1. Search Query (Name, Country, Agency)
+                val matchesQuery = query.isEmpty() || sat.name.contains(query, ignoreCase = true) ||
+                        sat.launchCountry.contains(query, ignoreCase = true) ||
+                        sat.launchAgency.contains(query, ignoreCase = true)
+
+                // 2. Unit Size Filter
+                val matchesUnit = unit == null || sat.unitSize == unit
+
+                // 3. Weight Range Filter
+                val matchesWeight = when (weight) {
+                    "Micro (< 1.5kg)" -> sat.weightKg < 1.5
+                    "Light (1.5 - 5kg)" -> sat.weightKg in 1.5..5.0
+                    "Medium (5 - 20kg)" -> sat.weightKg in 5.0..20.0
+                    "Heavy (> 20kg)" -> sat.weightKg > 20.0
+                    else -> true
+                }
+
+                // 4. Status Filter
+                val matchesStatus = status == null || sat.status == status
+
+                // 5. Country Filter
+                val matchesCountry = country == null || sat.launchCountry == country
+
+                // 6. Favorites Filter
+                val matchesFavorites = !favorites || sat.isFavorite
+
+                // 7. Mission Type Filter
+                val matchesMissionType = missionType == null || sat.missionType == missionType
+
+                matchesQuery && matchesUnit && matchesWeight && matchesStatus && matchesCountry && matchesFavorites && matchesMissionType
+            }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+        // Compile unique countries list dynamically
+        availableCountries = repository.allSatellites.map { list ->
+            list.map { it.launchCountry }.distinct().sorted()
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
     }
 
-    private fun loadSatellitesFromJson() {
+    fun selectSatellite(satellite: Satellite?) {
+        _selectedSatellite.value = satellite
+    }
+
+    fun toggleFavorite(satellite: Satellite) {
         viewModelScope.launch {
-            val list = withContext(Dispatchers.IO) {
-                val temp = mutableListOf<Satellite>()
-                try {
-                    val inputStream = getApplication<Application>().assets.open("satellites.json")
-                    val jsonString = inputStream.bufferedReader().use { it.readText() }
-                    val jsonArray = JSONArray(jsonString)
-                    
-                    for (i in 0 until jsonArray.length()) {
-                        val obj = jsonArray.getJSONObject(i)
-                        val weightStr = obj.optString("Type (U/mass)", "0")
-                        val numericWeight = try {
-                            weightStr.replace(Regex("[^0-9.]"), "").toDoubleOrNull() ?: 0.0
-                        } catch(e: Exception) { 0.0 }
-
-                        val missionDesc = obj.optString("Mission description", "بدون توضیحات")
-
-                        temp.add(
-                            Satellite(
-                                id = UUID.randomUUID().toString(),
-                                name = obj.optString("Mission name", "نامشخص"),
-                                missionType = missionDesc,
-                                unitSize = obj.optString("Type (U/mass)", "نامشخص"),
-                                weightKg = numericWeight,
-                                launchCountry = obj.optString("Nation", "نامشخص"),
-                                launchAgency = obj.optString("Organisation", "نامشخص"),
-                                status = obj.optString("Status", "نامشخص"),
-                                launchDate = obj.optString("Launch date", "نامشخص"),
-                                description = missionDesc,
-                                missionObjective = missionDesc
-                            )
-                        )
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                temp
+            repository.update(satellite.copy(isFavorite = !satellite.isFavorite))
+            // Update currently selected if it is the modified satellite
+            if (_selectedSatellite.value?.id == satellite.id) {
+                _selectedSatellite.value = _selectedSatellite.value?.copy(isFavorite = !satellite.isFavorite)
             }
-            _allSatellites.value = list
         }
     }
 
-    // متدهای تعاملی مورد نیاز کامپوننت‌های MainActivity
-    fun selectSatellite(satellite: Satellite?) {
-        _selectedSatellite.value = satellite
+    fun deleteSatellite(satellite: Satellite) {
+        viewModelScope.launch {
+            repository.delete(satellite)
+            if (_selectedSatellite.value?.id == satellite.id) {
+                _selectedSatellite.value = null
+            }
+        }
     }
 
     fun clearAllFilters() {
@@ -131,36 +163,56 @@ class SatelliteViewModel(application: Application) : AndroidViewModel(applicatio
         searchQuery.value = ""
     }
 
-    fun toggleFavorite(satellite: Satellite) {
-        val currentList = _allSatellites.value.toMutableList()
-        val index = currentList.indexOfFirst { it.id == satellite.id }
-        if (index != -1) {
-            val updated = currentList[index].copy(isFavorite = !currentList[index].isFavorite)
-            currentList[index] = updated
-            _allSatellites.value = currentList
-            if (_selectedSatellite.value?.id == satellite.id) {
-                _selectedSatellite.value = updated
-            }
-        }
-    }
-
-    fun deleteSatellite(satellite: Satellite) {
-        val currentList = _allSatellites.value.toMutableList()
-        currentList.removeAll { it.id == satellite.id }
-        _allSatellites.value = currentList
-        if (_selectedSatellite.value?.id == satellite.id) {
-            _selectedSatellite.value = null
-        }
-    }
-
     fun resetGeminiState() {
         _geminiSearchState.value = GeminiSearchState.Idle
     }
 
-    fun searchOnlineSatellite(query: String) {
-        _geminiSearchState.value = GeminiSearchState.Loading
+    /**
+     * Conducts a detailed lookup via Gemini for any nanosatellite from the nanosats.eu database.
+     * On success, imports it into the local database and automatically opens its detail view!
+     */
+    fun searchOnlineSatellite(name: String) {
+        if (name.isBlank()) return
+
         viewModelScope.launch {
-            _geminiSearchState.value = GeminiSearchState.Success("اطلاعات آنلاین یافت نشد.")
+            _geminiSearchState.value = GeminiSearchState.Loading
+            try {
+                // Call Gemini REST Service
+                val result = withContext(Dispatchers.IO) {
+                    GeminiClient.querySatelliteInfo(name)
+                }
+
+                // Map results to database entity
+                val newSatellite = Satellite(
+                    name = result.name,
+                    unitSize = result.unitSize,
+                    weightKg = result.weightKg,
+                    launchCountry = result.launchCountry,
+                    launchAgency = result.launchAgency,
+                    launchDate = result.launchDate,
+                    status = result.status,
+                    description = result.description,
+                    missionObjective = result.missionObjective,
+                    imageUrl = result.imageUrl,
+                    isCustom = true
+                )
+
+                // Save to local database
+                val insertedId = withContext(Dispatchers.IO) {
+                    repository.insert(newSatellite)
+                }
+
+                // Retrieve the inserted record
+                val savedSatellite = repository.getSatelliteById(insertedId.toInt()) ?: newSatellite.copy(id = insertedId.toInt())
+
+                _geminiSearchState.value = GeminiSearchState.Success(savedSatellite)
+                _selectedSatellite.value = savedSatellite
+
+            } catch (e: Exception) {
+                _geminiSearchState.value = GeminiSearchState.Error(
+                    e.message ?: "An unknown error occurred while retrieving satellite specs."
+                )
+            }
         }
     }
 }

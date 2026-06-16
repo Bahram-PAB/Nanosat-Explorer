@@ -1,0 +1,200 @@
+[
+  {
+    "Mission name": "Dragracer 1 (Alchemy, Dragracer A)",
+    "Organisation": "TriSept",
+    "Nation": "US",
+    "Type (U/mass)": "6U (1/2 12U XL)",
+    "Launch date": "2020-11-20",
+    "Status": "Reentered, Operational",
+    "Mission description": "Test a deployable conductive tape by Tethers Unlimited for deorbiting."
+  },
+  {
+    "Mission name": "TUBSAT-N",
+    "Organisation": "Technical University of Berlin",
+    "Nation": "Germany",
+    "Type (U/mass)": "8.5 kg",
+    "Launch date": "1998-07-07",
+    "Status": "Reentered, Was operational",
+    "Mission description": "Store and forward communication."
+  },
+  {
+    "Mission name": "TUBSAT-N1",
+    "Organisation": "Technical University of Berlin",
+    "Nation": "Germany",
+    "Type (U/mass)": "3 kg",
+    "Launch date": "1998-07-07",
+    "Status": "Reentered, Was operational",
+    "Mission description": "Store and forward communication."
+  },
+  {
+    "Mission name": "Artemis JAK (MASat, Picosat 5)",
+    "Organisation": "Santa Clara University",
+    "Nation": "US",
+    "Type (U/mass)": "0.2 kg",
+    "Launch date": "2000-01-27",
+    "Status": "No signal",
+    "Mission description": "Simple beacon transmitter."
+  },
+  {
+    "Mission name": "Artemis Louise (Lightning, Picosat 8)",
+    "Organisation": "Santa Clara University",
+    "Nation": "US",
+    "Type (U/mass)": "0.895 kg",
+    "Launch date": "2000-01-27",
+    "Status": "No signal",
+    "Mission description": "Research the effects of lightning on the outer ionosphere."
+  },
+  {
+    "Mission name": "Artemis Thelma (Thunder, Picosat 7)",
+    "Organisation": "Santa Clara University",
+    "Nation": "US",
+    "Type (U/mass)": "0.6 kg",
+    "Launch date": "2000-01-27",
+    "Status": "No signal",
+    "Mission description": "Research the effects of lightning on the outer ionosphere."
+  },
+  {
+    "Mission name": "ASUSat 1 (Arizona State University Satellite)",
+    "Organisation": "Arizona State University",
+    "Nation": "US",
+    "Type (U/mass)": "6 kg",
+    "Launch date": "2000-01-27",
+    "Status": "Was operational",
+    "Mission description": "Educational space systems engineering and Earth imaging."
+  },
+  {
+    "Mission name": "MEMS 1A (Pico 21, PICOSAT-1, OPAL PICOSATS)",
+    "Organisation": "DARPA",
+    "Nation": "US",
+    "Type (U/mass)": "0.275 kg",
+    "Launch date": "2000-01-27",
+    "Status": "Was operational",
+    "Mission description": "Demonstrate the basic functional elements of a low-power LEO  swarm  or formation PICOSAT array."
+  },
+  {
+    "Mission name": "MEMS 1B (Pico 23, Picosat 1, OPAL PICOSATS)",
+    "Organisation": "DARPA",
+    "Nation": "US",
+    "Type (U/mass)": "0.275 kg",
+    "Launch date": "2000-01-27",
+    "Status": "Was operational",
+    "Mission description": "Demonstrate the basic functional elements of a low-power LEO  swarm  or formation PICOSAT array."
+  },
+  {
+    "Mission name": "StenSat (Picosat 6)",
+    "Organisation": "Stensat Group",
+    "Nation": "US",
+    "Type (U/mass)": "0.2 kg",
+    "Launch date": "2000-01-27",
+    "Status": "No signal",
+    "Mission description": "Voice repeater for amateur radio operators."
+  },
+  {
+    "Mission name": "SNAP-1 (Surrey Nanosatellite Applications Platform)",
+    "Organisation": "Surrey Satellite Technology",
+    "Nation": "UK",
+    "Type (U/mass)": "6.5 kg",
+    "Launch date": "2000-06-28",
+    "Status": "Was operational",
+    "Mission description": "SNAP-1 nanosatellite, weighing 6.3kg, had a number of firsts, including what we believe to be the first nanosat with propulsion."
+  },
+  {
+    "Mission name": "MEMS 2A (Pico 20, PICOSAT 7, OPAL, MIGHTYSAT II.1 PICOSATS)",
+    "Organisation": "DARPA",
+    "Nation": "US",
+    "Type (U/mass)": "0.275 kg",
+    "Launch date": "2000-07-19",
+    "Status": "Reentered, Was operational",
+    "Mission description": "Demonstrate the basic functional elements of a low-power LEO  swarm  or formation PICOSAT array."
+  },
+  {
+    "Mission name": "MEMS 2B (Pico 22, PICOSAT 8, OPAL, MIGHTYSAT II.1 PICOSATS)",
+    "Organisation": "DARPA",
+    "Nation": "US",
+    "Type (U/mass)": "0.275 kg",
+    "Launch date": "2000-07-19",
+    "Status": "Reentered, Was operational",
+    "Mission description": "Demonstrate the basic functional elements of a low-power LEO  swarm  or formation PICOSAT array."
+  },
+  {
+    "Mission name": "Munin",
+    "Organisation": "Swedish Institute of Space Physics",
+    "Nation": "Sweden",
+    "Type (U/mass)": "6 kg",
+    "Launch date": "2000-11-21",
+    "Status": "Was operational",
+    "Mission description": "Collect data on auroral activity to predict space weather."
+  },
+  {
+    "Mission name": "MEPSI 1A (MEMS-based PicoSat Inspector)",
+    "Organisation": "DARPA",
+    "Nation": "US",
+    "Type (U/mass)": "0.8 kg",
+    "Launch date": "2002-11-24",
+    "Status": "Reentered, Was semi-operational",
+    "Mission description": "Demonstrate technologies for miniature autonomous inspector."
+  },
+  {
+    "Mission name": "MEPSI 1B (MEMS-based PicoSat Inspector)",
+    "Organisation": "DARPA",
+    "Nation": "US",
+    "Type (U/mass)": "0.8 kg",
+    "Launch date": "2002-11-24",
+    "Status": "Reentered, Was semi-operational",
+    "Mission description": "Demonstrate technologies for miniature autonomous inspector."
+  },
+  {
+    "Mission name": "AAUSAT 1 (AAU-CubeSat, AAU CubeSat)",
+    "Organisation": "Aalborg University",
+    "Nation": "Denmark",
+    "Type (U/mass)": "1U",
+    "Launch date": "2003-06-30",
+    "Status": "Was operational",
+    "Mission description": "Educational space systems engineering with ADCS and imaging."
+  },
+  {
+    "Mission name": "CanX-1",
+    "Organisation": "Space Flight Laboratory",
+    "Nation": "Canada",
+    "Type (U/mass)": "1U",
+    "Launch date": "2003-06-30",
+    "Status": "No signal",
+    "Mission description": "Demonstrate novel technologies for ADCS."
+  },
+  {
+    "Mission name": "CUTE-I (Cubical Tokyo Tech Engineering Satellite-I)",
+    "Organisation": "Tokyo Institute of Technology",
+    "Nation": "Japan",
+    "Type (U/mass)": "1U",
+    "Launch date": "2003-06-30",
+    "Status": "Operational",
+    "Mission description": "Communication and solar panel deployment."
+  },
+  {
+    "Mission name": "DTUSat-1",
+    "Organisation": "Technical University of Denmark",
+    "Nation": "Denmark",
+    "Type (U/mass)": "1U",
+    "Launch date": "2003-06-30",
+    "Status": "No signal",
+    "Mission description": "Tether deployment to test deorbiting method."
+  },
+  {
+    "Mission name": "QuakeSat",
+    "Organisation": "Stanford University",
+    "Nation": "US",
+    "Type (U/mass)": "3U",
+    "Launch date": "2003-06-30",
+    "Status": "Was operational",
+    "Mission description": "Detecting earthquake ELF emission data. First 3U CubeSat."
+  },
+  {
+    "Mission name": "XI-IV",
+    "Organisation": "University of Tokyo",
+    "Nation": "Japan",
+    "Type (U/mass)": "1U",
+    "Launch date": "2003-06-30",
+    "Status": "Operational",
+    "Mission description": "Demonstrate CubeSat platform technologies and COTS camera."
+  }
+]

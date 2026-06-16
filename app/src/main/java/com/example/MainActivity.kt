@@ -76,7 +76,6 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
     val selectedMissionType by viewModel.selectedMissionType.collectAsStateWithLifecycle()
     val showOnlyFavorites by viewModel.showOnlyFavorites.collectAsStateWithLifecycle()
     val countries by viewModel.availableCountries.collectAsStateWithLifecycle()
-    val totalCount by viewModel.totalCount.collectAsStateWithLifecycle()
     
     val selectedSatellite by viewModel.selectedSatellite.collectAsStateWithLifecycle()
     val geminiState by viewModel.geminiSearchState.collectAsStateWithLifecycle()
@@ -300,7 +299,7 @@ fun MainScreen(viewModel: SatelliteViewModel = viewModel()) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "یافت شده: ${satellites.size} از $totalCount مورد",
+                        text = "یافت شده: ${satellites.size} مورد",
                         color = SecondaryText,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
@@ -467,36 +466,36 @@ fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(230.dp)
             .clickable { onSelect() }
             .testTag("satellite_item_${satellite.id}"),
         colors = CardDefaults.cardColors(containerColor = SpaceCard),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, LightBorder)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Satellite Image Container
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(110.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Header: Name & Type U size badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(satellite.imageUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Satellite imagery for ${satellite.name}",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                Text(
+                    text = satellite.name,
+                    color = PrimaryText,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
 
-                // Unit badge layered on top
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
-                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                        .background(SolidPrimary.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
@@ -506,13 +505,31 @@ fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit) {
                         fontWeight = FontWeight.Bold
                     )
                 }
+            }
 
-                // Country Indicator pill layered top right
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Organisation / Operator
+            Text(
+                text = satellite.launchAgency,
+                color = SecondaryText,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Specs line
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Nation Country Indicator pill
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                        .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(4.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
@@ -523,42 +540,6 @@ fun SatelliteCard(satellite: Satellite, onSelect: () -> Unit) {
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-            }
-
-            // Specs Metadata
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(10.dp)
-            ) {
-                Text(
-                    text = satellite.name,
-                    color = PrimaryText,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = satellite.launchAgency,
-                    color = SecondaryText,
-                    fontSize = 11.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "وزن: ${satellite.weightKg} کیلوگرم",
-                    color = SecondaryText,
-                    fontSize = 11.sp
-                )
-
-                Spacer(modifier = Modifier.weight(1f))
 
                 // Operational Status Colored Pill
                 Row(
@@ -601,39 +582,18 @@ fun SatelliteDetailView(
             .background(SpaceBackground)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header Hero Banner Parallax
-            Box(
+            // Header Action Bar & Title Block (No image)
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp)
+                    .background(SpaceCard)
+                    .padding(bottom = 20.dp)
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(satellite.imageUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Satellite full banner",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                // Semi-transparent bottom scrim
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, SpaceBackground.copy(alpha = 0.9f), SpaceBackground),
-                                startY = 100f
-                            )
-                        )
-                )
-
-                // Action Bar layered on top (Close & Favorite & Optional delete)
+                // Action Bar: Close, Favorite, Delete
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                         .statusBarsPadding(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -641,7 +601,7 @@ fun SatelliteDetailView(
                     IconButton(
                         onClick = onClose,
                         modifier = Modifier
-                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(20.dp))
                     ) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
@@ -655,7 +615,7 @@ fun SatelliteDetailView(
                             IconButton(
                                 onClick = onDelete,
                                 modifier = Modifier
-                                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                                    .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(20.dp))
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
@@ -668,7 +628,7 @@ fun SatelliteDetailView(
                         IconButton(
                             onClick = onToggleFavorite,
                             modifier = Modifier
-                                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                                .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(20.dp))
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Star,
@@ -679,11 +639,11 @@ fun SatelliteDetailView(
                     }
                 }
 
-                // Satellite Title & Status layered inside banner
+                // Satellite Title & Status Block
                 Column(
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -693,22 +653,23 @@ fun SatelliteDetailView(
                             text = satellite.name,
                             color = PrimaryText,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 28.sp,
-                            fontFamily = FontFamily.SansSerif
+                            fontSize = 26.sp,
+                            fontFamily = FontFamily.SansSerif,
+                            modifier = Modifier.weight(1f)
                         )
 
                         if (satellite.isCustom) {
                             Box(
                                 modifier = Modifier
                                     .border(1.dp, SolidPrimary, RoundedCornerShape(4.dp))
-                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text("AI SYNC", color = SolidPrimary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -754,7 +715,7 @@ fun SatelliteDetailView(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SpecItemBox(modifier = Modifier.weight(1f), title = "نوع (یونیت / وزن)", valString = satellite.unitSize, icon = Icons.Default.Info)
+                            SpecItemBox(modifier = Modifier.weight(1f), title = "اندازه بدنه", valString = satellite.unitSize, icon = Icons.Default.Info)
                             SpecItemBox(modifier = Modifier.weight(1f), title = "وزن کل (جرم)", valString = "${satellite.weightKg} kg", icon = Icons.Default.Build)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
