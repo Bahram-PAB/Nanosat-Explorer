@@ -1,5 +1,9 @@
 # 🛰️ NanoSat Finder (یابنده نانوماهواره) - v4.2
 
+<img width="768" height="1376" alt="ساخت_بروشور_تبلیغاتی_اپلیکیشن_202606171536" src="https://github.com/user-attachments/assets/b945c3f5-fadc-49c3-a8fc-74dbc8b44246" />
+
+
+
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9.0-blue.svg?logo=kotlin)](https://kotlinlang.org)
 [![Compose](https://img.shields.io/badge/Jetpack_Compose-M3-green.svg?logo=android)](https://developer.android.com/compose)
 [![Room](https://img.shields.io/badge/Local_Database-Room_SQLite-orange.svg?logo=sqlite)](https://developer.android.com/training/data-storage/room)
